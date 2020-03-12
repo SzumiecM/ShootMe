@@ -1,46 +1,52 @@
 import pygame
+from network import Network
+from player import Player
 
-window = pygame.display.set_mode((600,600))
-pygame.display.set_caption('Client')
+width = 500
+height = 500
+window = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Client")
+
+clientNumber = 0
 
 
-class Player:
-    def __init__(self, x, y, color):
-        self.x = x
-        self.y = y
-        self.color = color
-        self.movedist = 10
+def read_pos(str):
+    str = str.split(",")
+    return int(str[0]), int(str[1])
 
-    def draw(self, window):
-        pygame.draw.rect(window, self.color, pygame.Rect(self.x, self.y, 20, 20))
 
-    def move(self):
-        keys = pygame.key.get_pressed()
+def make_pos(tup):
+    return str(tup[0]) + "," + str(tup[1])
 
-        if keys[pygame.K_w]:
-            self.y -= self.movedist
-        if keys[pygame.K_a]:
-            self.x -= self.movedist
-        if keys[pygame.K_s]:
-            self.y += self.movedist
-        if keys[pygame.K_d]:
-            self.x += self.movedist
 
-def refresh(window, player):
-    window.fill((0, 0, 0))
+def redrawWindow(window, player, player2):
+    window.fill((255, 255, 255))
     player.draw(window)
+    player2.draw(window)
     pygame.display.update()
 
-run = True
-p = Player(300, 300, (255, 0, 0))
-clock = pygame.time.Clock()
 
-while run:
-    clock.tick(60)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-            pygame.quit()
+def main():
+    run = True
+    n = Network()
+    startPos = read_pos(n.getPos())
+    p = Player(startPos[0],startPos[1],100,100,(0,255,0))
+    p2 = Player(0,0,100,100,(255,0,0))
+    clock = pygame.time.Clock()
 
-    p.move()
-    refresh(window, p)
+    while run:
+        clock.tick(60)
+        p2Pos = read_pos(n.send(make_pos((p.x, p.y))))
+        p2.x = p2Pos[0]
+        p2.y = p2Pos[1]
+        p2.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+
+        p.move()
+        redrawWindow(window, p, p2)
+
+main()
