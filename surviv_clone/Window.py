@@ -2,21 +2,23 @@ import pygame
 from Gameplay import Gameplay
 import time
 
+
 class Window:
     # starting settings
     name = 'surviv'
     music_path = None
 
     def __init__(self):
-        self.gameplay = Gameplay()
-        self.height = self.gameplay.get_screen_height()
-        self.width = self.gameplay.get_screen_width()
-
         pygame.init()
         #setting window's name
         pygame.display.set_caption(self.name)
 
-        # !!!
+        self.gameplay = Gameplay()
+        self.height = self.gameplay.get_screen_height()
+        self.width = self.gameplay.get_screen_width()
+
+
+        # to play a music in a background
         if self.music_path is not None:
             pygame.mixer.init()
             pygame.mixer.music.load(self.music_path)
@@ -28,6 +30,7 @@ class Window:
     def start(self):
         stopped = False
         clock = pygame.time.Clock()
+        pygame.font.init()
         while not stopped:
             # Triggering events: using mouse and keyboard
             for event in pygame.event.get():
@@ -44,5 +47,4 @@ class Window:
 
             # refreshes screen
             pygame.display.flip()
-            #input("xD")
 
