@@ -35,10 +35,10 @@ class Gameplay:
     visible = []
     bullets = []
 
-    allPlayersToPickle = [None] * max_players
-    bulletsToPickle = [None] * max_players
+    allPlayersToPickle = []
+    bulletsToPickle = []
 
-    c_f = 0
+    c_f = 1
 
     controling_keys = {
         'up': False,
@@ -52,12 +52,10 @@ class Gameplay:
         self.load_data()
         self.generate_obstacles()
         self.generate_players()
-        print(self.players)
-        self.current_focus = self.players[0]
-        for i in range(len(self.players)):
-            self.pickle_player(i)
+        self.current_focus = self.players[self.c_f]
+        self.pickle_players()
 
-        self.font = pygame.font.SysFont(pygame.font.get_default_font(), 30)
+        #self.font = pygame.font.SysFont(pygame.font.get_default_font(), 30)
 
         zoom = self.current_focus.zoom
         coeff = 1
@@ -236,6 +234,7 @@ class Gameplay:
                     if obstacle in self.bullets:
                         self.bullets.remove(obstacle)
         self.visible = []
+        self.pickle_players()
 
     def collide_bullet(self, obstacle, bullet):
         obstacle.get_damage(bullet.damage)
@@ -262,29 +261,30 @@ class Gameplay:
             'distance': bullet.distance
         })
 
-    def pickle_player(self, index):
-        self.allPlayersToPickle[index] = {
-            'x': self.players[index].x,
-            'y': self.players[index].y,
-            'weapon': self.players[index].weapon.type,
-            'life': self.players[index].life
+    def pickle_players(self):
+        # self.allPlayersToPickle = []
+        # for player in self.players:
+        #     self.allPlayersToPickle.append({
+        #         'x': player.x,
+        #         'y': player.y,
+        #         'weapon': player.weapon.type,
+        #         'life': player.life
+        #     })
+
+        self.allPlayersToPickle = {
+                    'x': self.current_focus.x,
+                    'y': self.current_focus.y,
+                    'weapon': self.current_focus.weapon.type,
+                    'life': self.current_focus.life
         }
 
-    def unPickle_player(self, data, index):
-        print(data)
-        self.players[index].x = data[index][0]['x']
-        self.players[index].y = data[index][0]['y']
-        self.players[index].weapon.type = data[index][0]['weapon']
-        self.players[index].life = data[index][0]['life']
-
-    def update(self, data):
-        for i in range(len(data)):
-            if i != self.c_f:
-                self.unPickle_player(data, i)
-
-    def sync_windows(self, data):
-        for i in range(len(data)):
-            self.unPickle_player(data, i)
+    def unPickle_players(self, data):
+        for i in range(len(self.players)):
+            if self.c_f != i:
+                self.players[i].x = data[0][i]['x']
+                self.players[i].y = data[0][i]['y']
+                self.players[i].weapon.type = data[0][i]['weapon']
+                self.players[i].life = data[0][i]['life']
 
     # if obstacle arg is True it uses obstacle as a first argument
     def perform_collision(self, instance, function, args, obstacle_as_arg=False, works_for_players=False):
@@ -374,6 +374,9 @@ class Gameplay:
                 player.set_weapon(weapon)
                 self.pick_ups.remove(pick_up)
                 break
+
+    def update(self, data):
+        self.unPickle_players(data)
 
     # Function checks if an object is in range of a screen.
     # Object should be displayed only if it is in range.

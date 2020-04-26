@@ -1,5 +1,5 @@
 import pygame
-from network import Network
+from surviv_clone.network import Network
 from player import Player
 
 width = 500

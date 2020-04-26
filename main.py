@@ -1,7 +1,12 @@
 import pygame
 import math
-import sys
+import sys, os
 import settings
+from surviv_clone.network import Network
+
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 pygame.init()
 
 screen = pygame.display.set_mode(settings.screen_SIZE)
@@ -12,7 +17,7 @@ class Player(object):
 
     def __init__(self):
         self.x, self.y = settings.screen_CENTER
-        self.surface = pygame.image.load('C:/Users/majka/OneDrive/Pulpit/PythonProjekty/Game/pic2.png')
+        self.surface = pygame.image.load(os.path.join(__location__, 'pic2.png'))
         self.rotated_surface = self.surface.copy()
         self.rect = self.surface.get_rect()
         self.speed = 0.1
@@ -30,7 +35,7 @@ class Player(object):
         screen.blit(self.rotated_surface, (self.x, self.y))
 
 
-class projectile(object):
+class Projectile(object):
 
     def __init__(self, x, y, radius, color):
         self.x = x
@@ -55,7 +60,13 @@ def redraw():
 
 
 bullets = []
+n = Network()
+p = n.getP()
+
 while (running):
+
+    p2 = n.send(p)
+
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             sys.exit()
