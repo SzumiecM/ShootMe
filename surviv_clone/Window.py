@@ -33,14 +33,17 @@ class Window:
         base = n.getP()
         data = base[0]
         player = base[1]
+        boxes = base[2]
         self.gameplay.c_f = player  # ustawiamy id gracza
         self.gameplay.current_focus = self.gameplay.players[player]
         self.gameplay.sync_windows(data)
+        self.gameplay.generate_obst_from_data(boxes)
         clock = pygame.time.Clock()
         pygame.font.init()
         while not stopped:
             #print(player)
-            p1 = [self.gameplay.allPlayersToPickle[player], self.gameplay.bulletsToPickle]
+            p1 = [self.gameplay.allPlayersToPickle[player], self.gameplay.bulletsToPickle, self.gameplay.boxes]
+            self.gameplay.boxes = []
             #print(p1)
             p2 = n.send(p1)
             #print(p2)
@@ -60,9 +63,9 @@ class Window:
             self.gameplay.pickle_player(self.gameplay.c_f)
             self.gameplay.draw()
 
-            print('KURWA')
-            for p in self.gameplay.players:
-                print(str(p.x) + ' | ' + str(p.y))
+            # print('KURWA')
+            # for p in self.gameplay.players:
+            #     print(str(p.x) + ' | ' + str(p.y))
 
             # refreshes screen
             pygame.display.flip()

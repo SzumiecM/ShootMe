@@ -37,6 +37,7 @@ class Gameplay:
 
     allPlayersToPickle = [None] * max_players
     bulletsToPickle = [None] * max_players
+    boxes = []
 
     c_f = 0
 
@@ -51,6 +52,7 @@ class Gameplay:
         self.load_settings()
         self.load_data()
         self.generate_obstacles()
+        self.pickle_boxes()
         self.generate_players()
         print(self.players)
         self.current_focus = self.players[0]
@@ -138,6 +140,17 @@ class Gameplay:
             if not self.check_if_collide(obstacle):
                 self.obstacles.append(obstacle)
                 obstacles_area += obstacle.get_area()
+
+    def generate_obst_from_data(self, data):
+        self.obstacles = []
+        for box in data:
+            x = box['x']
+            y = box['y']
+            size = box['size']
+            image = self.images['rock']
+            obstacle = Rock(self, x, y, size, image)
+            self.obstacles.append(obstacle)
+        self.boxes = []
 
     def check_if_collide(self, obstacle):
         for curr_obstacle in self.obstacles:
@@ -239,6 +252,7 @@ class Gameplay:
 
     def collide_bullet(self, obstacle, bullet):
         obstacle.get_damage(bullet.damage)
+        self.pickle_box(self.obstacles.index(obstacle))
         if bullet in self.bullets:
             self.bullets.remove(bullet)
             self.bulletsToPickle.remove(x for x in self.bulletsToPickle if x['x'] == bullet.x and x['y'] == bullet.y)
@@ -254,6 +268,34 @@ class Gameplay:
             self.bullets.remove(bullet)
             self.bulletsToPickle.remove(x for x in self.bulletsToPickle if x['x'] == bullet.x and x['y'] == bullet.y)
 
+    def pickle_boxes(self):
+        for box in self.obstacles:
+            self.boxes.append({
+                'x': box.x,
+                'y': box.y,
+                'size': box.size
+            })
+
+    def pickle_box(self, index):
+        self.boxes.append([{
+            'x': self.obstacles[index].x,
+            'y': self.obstacles[index].y,
+            'size': self.obstacles[index].size
+        }, index])
+
+    def pickle_box_removal(self, index):
+        self.boxes.append(['remove', index])
+
+    def unPickle_boxes(self, data, index):
+        for box in data[index][2]:
+            print(box)
+            if box[0] == 'remove':
+                self.obstacles.remove(self.obstacles[box[1]])
+            else:
+                self.obstacles[box[1]].x = box[0]['x']
+                self.obstacles[box[1]].y = box[0]['y']
+                self.obstacles[box[1]].size = box[0]['size']
+
     def pickle_bullet(self, bullet):
         self.bulletsToPickle.append({
             'angle': bullet.angle,
@@ -267,20 +309,24 @@ class Gameplay:
             'x': self.players[index].x,
             'y': self.players[index].y,
             'weapon': self.players[index].weapon.type,
-            'life': self.players[index].life
+            'life': self.players[index].life,
+            'angle': self.players[index].angle
         }
 
     def unPickle_player(self, data, index):
-        print(data)
+        #print(data)
         self.players[index].x = data[index][0]['x']
         self.players[index].y = data[index][0]['y']
         self.players[index].weapon.type = data[index][0]['weapon']
         self.players[index].life = data[index][0]['life']
+        self.players[index].angle = data[index][0]['angle']
+        self.players[index].change_weapon_sprite(data[index][0]['weapon'])
 
     def update(self, data):
         for i in range(len(data)):
             if i != self.c_f:
                 self.unPickle_player(data, i)
+                self.unPickle_boxes(data, i)
 
     def sync_windows(self, data):
         for i in range(len(data)):
@@ -322,6 +368,9 @@ class Gameplay:
             for obstacle in itertools.chain(self.obstacles, self.players):
                 if self.collide(obstacle, attack_zone) and obstacle != player:
                     obstacle.get_damage(player.weapon.damage)
+                    try:
+                        self.pickle_box(self.obstacles.index(obstacle))
+                    except: pass
         else:
             if player.weapon.is_able_to_shot():
                 bullet = player.shot(self.images['rock'])
@@ -336,6 +385,8 @@ class Gameplay:
         y = obstacle.y
         for objects in [self.obstacles, self.players]:
             if obstacle in objects:
+                if obstacle in self.obstacles:
+                    self.pickle_box_removal(self.obstacles.index(obstacle))
                 objects.remove(obstacle)
                 break
 
@@ -399,7 +450,8 @@ class Gameplay:
         self.draw_map()
 
         for instance in itertools.chain(self.players, self.obstacles, self.pick_ups, self.bullets):
-            if self.check_if_on_screen(instance):
+            #if self.check_if_on_screen(instance):
+            if True:
                 self.draw_instance(instance)
 
         self.draw_hud()

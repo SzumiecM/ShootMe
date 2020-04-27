@@ -24,15 +24,15 @@ g = Gameplay()
 
 base = []
 for i in range(g.max_players):
-    base.append([g.allPlayersToPickle[i], []])
+    base.append([g.allPlayersToPickle[i], [], []])
 
 print(base)
 def threaded_client(conn, player):
-    conn.send(pickle.dumps([base, player]))
+    conn.send(pickle.dumps([base, player, g.boxes]))
     reply = ""
     while True:
         try:
-            playerData = pickle.loads(conn.recv(2048))  # pobieramy tylko playera
+            playerData = pickle.loads(conn.recv(8192))  # pobieramy tylko playera
             base[player] = playerData
 
             if not playerData:
