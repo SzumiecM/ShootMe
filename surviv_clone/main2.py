@@ -2,5 +2,5 @@ from Window import Window
 
 
 window = Window()
-window.start()
+window.start(a)
 
