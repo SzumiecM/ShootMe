@@ -1,6 +1,6 @@
 #Everything that can be visible as an object in the game
 import math
-import pygame
+
 class Instance:
     angle = 0
 
@@ -32,10 +32,11 @@ class Instance:
         return self.size * self.size
 
     def get_image(self):
-        return self.image if self.image is not None else pygame.Surface((self.size, self.size))
+        return self.image
 
     def move(self, direction, timedelta, step = 0):
         step = self.speed*timedelta if step == 0 else step
+        #print(step)
         if direction == 'up':
             self.y -= step
         elif direction == 'down':
@@ -103,7 +104,7 @@ class Player(Obstacle):
         self.speed = 1
         self.zoom = 2
         self.weapon = None
-        self.life = 100.0
+        self.life = 100
 
     def set_weapon(self, weapon):
         self.weapon = weapon
@@ -115,15 +116,13 @@ class Player(Obstacle):
         self.image = Player.images['player&' + weapon_name]
 
     def shot(self, image=None):
-        x = self.x + 0.5 * self.size
-        y = self.y + 0.5 * self.size
-        bullet, num = self.weapon.shot(x, y, self.angle, image)
+        angle = math.pi * self.angle / 180
+        x = self.x + 0.75 * self.size
+        y = self.y + 0.75 * self.size
+        bullet, num = self.weapon.shot(x, y, angle, image)
         if num == 0:
             self.set_weapon(Weapon(self.gameplay, 'hand', None))
-        if bullet is not None:
-            bullet.set_owner(self)
         return bullet
-
 
 class Bullet(Obstacle):
     def __init__(self, gameplay, x, y, size, image, angle, speed, damage, distance):
@@ -132,10 +131,6 @@ class Bullet(Obstacle):
         self.speed = speed
         self.damage = damage
         self.distance = distance
-        self.owner = None
-
-    def set_owner(self, owner):
-        self.owner = owner
 
     def move(self, direction, timedelta, step = 0):
         super().move(direction, timedelta, step)
@@ -160,7 +155,6 @@ class Weapon(Instance):
             self.distance = 100.0
             self.damage = 20.0
             self.speed = 20.0
-            self.bullet_size = 40
         elif type == "shotgun":
             self.fire_rate = 8.0
             self.reload_time = 10.0
@@ -168,24 +162,20 @@ class Weapon(Instance):
             self.distance = 100.0
             self.damage = 20.0
             self.speed = 20.0
-            self.bullet_size = 50
         elif type == "thomson":
             self.fire_rate = 1.0
             self.reload_time = 20.0
             self.max_ammo = 30
             self.distance = 100.0
-            self.damage = 5.0
+            self.damage = 20.0
             self.speed = 30.0
-            self.bullet_size = 35
         else: #hand
-            self.fire_rate = 1.0
+            self.fire_rate = 5.0
             self.reload_time = 2.0
-            self.max_ammo = 1
+            self.max_ammo = -1
             self.distance = 40.0
             self.damage = 2.0
             self.speed = 0.0
-            self.bullet_size = 0
-
 
         self.ammo = self.max_ammo * 2
         self.magazine = self.max_ammo
@@ -193,18 +183,14 @@ class Weapon(Instance):
     def shot(self, x=0, y=0, angle=0, image=None):
         bullet = None
         if self.type != 'hand':
-            bullet = Bullet(self.gameplay, x, y, self.bullet_size, image, angle, self.speed, self.damage, self.distance)
+            bullet = Bullet(self.gameplay, x, y, 10, image, angle, self.speed, self.damage, self.distance)
             self.magazine -= 1
         self.fire_rate_waiting = True
         return bullet, self.ammo + self.magazine
 
     def reload(self):
-        if self.reload_waiting:
-            self.reload_waiting = False
-            self.reload_waiting_time = self.reload_time
-        elif self.magazine < self.max_ammo:
-            self.reload_waiting = True
-            self.reload_waiting_time = 0.0
+        self.reload_waiting = True
+        self.reload_waiting_time = 0.0
 
     def wait(self):
         if self.fire_rate_waiting:
@@ -225,7 +211,6 @@ class Weapon(Instance):
             self.reload_waiting_time += 1
         elif self.ammo > 0:
             difference = self.max_ammo - self.magazine
-            difference = difference if difference < self.ammo else self.ammo
             self.magazine += difference
             self.ammo -= difference
 
@@ -234,4 +219,3 @@ class Weapon(Instance):
 
     def is_able_to_shot(self):
         return not self.fire_rate_waiting and self.magazine > 0 and not self.reload_waiting
-

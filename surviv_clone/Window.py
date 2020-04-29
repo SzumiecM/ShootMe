@@ -44,6 +44,7 @@ class Window:
             #print(player)
             p1 = [self.gameplay.allPlayersToPickle[player], self.gameplay.bulletsToPickle, self.gameplay.boxes]
             self.gameplay.boxes = []
+            self.gameplay.bulletsToPickle = []
             #print(p1)
             p2 = n.send(p1)
             #print(p2)

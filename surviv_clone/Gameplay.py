@@ -36,7 +36,7 @@ class Gameplay:
     bullets = []
 
     allPlayersToPickle = [None] * max_players
-    bulletsToPickle = [None] * max_players
+    bulletsToPickle = []
     boxes = []
 
     c_f = 0
@@ -47,15 +47,23 @@ class Gameplay:
         'right': False,
         'left': False
     }
+    area_expansion_time = 5.0 * 60
 
     def __init__(self):
         self.load_settings()
         self.load_data()
+
+        area_radius = self.map_size * 2 ** 0.5 * 0.5
+        mid = self.map_size * 0.6
+        self.area_width = area_radius - self.map_size / 2
+        self.aimed_area_width = self.area_width
+        self.area = Instance(self, mid, mid, 2 * area_radius, None)
+
         self.generate_obstacles()
         self.pickle_boxes()
         self.generate_players()
-        print(self.players)
         self.current_focus = self.players[0]
+        # print(self.players)
         for i in range(len(self.players)):
             self.pickle_player(i)
 
@@ -90,6 +98,7 @@ class Gameplay:
         self.density = data['density']
         self.max_obstacle_size = data['max_obstacle_size']
         self.min_obstacle_size = data['min_obstacle_size']
+        self.area_expansion_time = data['area_expansion_time'] * 60
 
     def load_data(self):
         # loading images
@@ -107,6 +116,7 @@ class Gameplay:
 
     # checks if two objects collide
     def collide(self, obstacle_1, obstacle_2):
+        #print('kolizja ' + str(obstacle_1) + ' | ' + str(obstacle_2))
         if isinstance(obstacle_2, pygame.Rect):
             return obstacle_1.get_collider().colliderect(obstacle_2)
         else:
@@ -159,21 +169,23 @@ class Gameplay:
 
         return False
 
-    def get_players(self):
-        return self.players
-
     def generate_players(self):
         for i in range(0, self.max_players):
             player = self.create_player()
             while self.check_if_collide(player):
                 player = self.create_player()
             self.players.append(player)
-        return self.players
 
     def create_player(self):
-        x = random.uniform(0, self.map_size)
-        y = random.uniform(0, self.map_size)
-        size = self.min_obstacle_size + (self.min_obstacle_size + self.max_obstacle_size) // 3
+        x = 0
+        y = 0
+        mid_x = self.area.x
+        mid_y = self.area.y
+
+        while (x - mid_x) ** 2 + (y - mid_y) ** 2 > (self.area.size / 2 - self.area_width) ** 2:
+            x = random.uniform(0, self.map_size)
+            y = random.uniform(0, self.map_size)
+        size = self.min_obstacle_size + (self.min_obstacle_size + self.max_obstacle_size)
         image = self.images["player&hand"]
         player = Player(self, x, y, size, image)
         player.set_weapon(Weapon(self, 'hand', None))
@@ -217,6 +229,12 @@ class Gameplay:
             index = index if index < len(self.players) else 0
             self.current_focus = self.players[index]
 
+    def extend_area_width(self):
+        if self.aimed_area_width <= self.area_width:
+            self.aimed_area_width += (self.area.size - self.area_width) / 10
+            if self.aimed_area_width > self.area.size:
+                self.aimed_area_width = self.area.size
+
     def play(self, timedelta):
         for key in ['right', 'left', 'up', 'down']:
             # if any from WSAD pressed
@@ -233,11 +251,15 @@ class Gameplay:
 
         for player in self.players:
             player.weapon.wait()
+            if self.is_out_of_area(player):
+                player.get_damage(0.5)
 
         self.rotate_player(self.current_focus)
 
         for bullet in self.bullets:
             self.move_bullet(bullet, timedelta)
+            #print(bullet)
+            print(str(bullet.x) + ' | ' + str(bullet.y) + ' | ' + str(bullet.speed) + ' | ' + str(bullet.angle))
             self.perform_collision(bullet, self.collide_bullet, (bullet,), obstacle_as_arg=True, works_for_players=True)
 
         for obstacle in itertools.chain(self.players, self.bullets):
@@ -250,15 +272,34 @@ class Gameplay:
                         self.bullets.remove(obstacle)
         self.visible = []
 
+        if self.area_width < self.aimed_area_width:
+            self.area_width += self.min_obstacle_size / 2
+
+        #TODO TEEEEEEEEEEEEEEEEEEEEEEEEEEST
+        # dat = '| '
+        # for player in self.players:
+        #     dat += str(player.x) + ' | ' + str(player.y) + ' | '
+        # print(dat)
+
+    def is_out_of_area(self, player):
+        x = player.x + player.size / 2
+        y = player.y + player.size / 2
+        mid_x = self.area.x
+        mid_y = self.area.y
+        return (x - mid_x) ** 2 + (y - mid_y) ** 2 > (self.area.size / 2 - self.area_width) ** 2
+
     def collide_bullet(self, obstacle, bullet):
-        obstacle.get_damage(bullet.damage)
-        self.pickle_box(self.obstacles.index(obstacle))
-        if bullet in self.bullets:
-            self.bullets.remove(bullet)
-            self.bulletsToPickle.remove(x for x in self.bulletsToPickle if x['x'] == bullet.x and x['y'] == bullet.y)
+        print(obstacle)
+        print(str(bullet.x) + ' | ' + str(bullet.y) + ' | ' + str(bullet.speed) + ' | ' + str(bullet.angle))
+        if obstacle != bullet.owner:
+            obstacle.get_damage(bullet.damage)
+            # if obstacle in self.obstacles:
+            #     self.pickle_box(self.obstacles.index(obstacle))
+            if bullet in self.bullets:
+                self.bullets.remove(bullet)
 
     def move_bullet(self, bullet, timedelta):
-        angle = bullet.angle
+        angle = math.pi * bullet.angle / 180
         step = bullet.speed * timedelta / 100
         x_step = -step * math.sin(angle)
         y_step = -step * math.cos(angle)
@@ -266,7 +307,6 @@ class Gameplay:
         bullet.move('down', y_step)
         if bullet.distance < 0:
             self.bullets.remove(bullet)
-            self.bulletsToPickle.remove(x for x in self.bulletsToPickle if x['x'] == bullet.x and x['y'] == bullet.y)
 
     def pickle_boxes(self):
         for box in self.obstacles:
@@ -298,11 +338,21 @@ class Gameplay:
 
     def pickle_bullet(self, bullet):
         self.bulletsToPickle.append({
+            'x': bullet.x,
+            'y': bullet.y,
+            'size': bullet.size,
             'angle': bullet.angle,
             'speed': bullet.speed,
             'damage': bullet.damage,
             'distance': bullet.distance
         })
+
+    def unPickle_bullets(self, data, index):
+        for bullet in data[index][1]:
+            bullet = Bullet(self, bullet['x'], bullet['y'], bullet['size'], self.images['bullet'], bullet['angle'], bullet['speed'], bullet['damage'], bullet['distance'])
+            print(str(bullet.x) + ' | ' + str(bullet.y) + ' | ' + str(bullet.speed) + ' | ' + str(bullet.angle) + ' <-- PRZESŁANA KULA')
+            bullet.set_owner(self.players[index])
+            self.bullets.append(bullet)
 
     def pickle_player(self, index):
         self.allPlayersToPickle[index] = {
@@ -314,7 +364,7 @@ class Gameplay:
         }
 
     def unPickle_player(self, data, index):
-        #print(data)
+        # print(data)
         self.players[index].x = data[index][0]['x']
         self.players[index].y = data[index][0]['y']
         self.players[index].weapon.type = data[index][0]['weapon']
@@ -327,6 +377,7 @@ class Gameplay:
             if i != self.c_f:
                 self.unPickle_player(data, i)
                 self.unPickle_boxes(data, i)
+                self.unPickle_bullets(data, i)
 
     def sync_windows(self, data):
         for i in range(len(data)):
@@ -356,29 +407,30 @@ class Gameplay:
 
     def attack(self, player):
         if player.weapon.type == 'hand':
-            # creating a box by the front of a player
-            # to give a damage
-            angle = math.pi * player.angle / 180
-            distance = player.weapon.distance
-            x = player.x + 0.75 * player.size - math.sin(angle) * (2 * distance)
-            y = player.y + 0.75 * player.size - math.cos(angle) * (2 * distance)
-            attack_zone = pygame.Rect(x, y, distance, distance)
-            # hand shoots to simulate waiting for a next punch
-            player.shot()
-            for obstacle in itertools.chain(self.obstacles, self.players):
-                if self.collide(obstacle, attack_zone) and obstacle != player:
-                    obstacle.get_damage(player.weapon.damage)
-                    try:
-                        self.pickle_box(self.obstacles.index(obstacle))
-                    except: pass
+            if player.weapon.is_able_to_shot():
+                # creating a box by the front of a player
+                # to give a damage
+                angle = math.pi * player.angle / 180
+                distance = player.weapon.distance
+                x = player.x + 0.75 * player.size - math.sin(angle) * (2 * distance)
+                y = player.y + 0.75 * player.size - math.cos(angle) * (2 * distance)
+                attack_zone = pygame.Rect(x, y, distance, distance)
+                for obstacle in itertools.chain(self.obstacles, self.players):
+                    if self.collide(obstacle, attack_zone) and obstacle != player:
+                        obstacle.get_damage(player.weapon.damage)
+                        try:
+                            self.pickle_box(self.obstacles.index(obstacle))
+                        except:
+                            pass
+                        player.shot()
+                        # hand shoots to simulate waiting for a next punch
         else:
             if player.weapon.is_able_to_shot():
-                bullet = player.shot(self.images['rock'])
+                bullet = player.shot(self.images['bullet'])
                 self.bullets.append(bullet)
+                print(str(bullet.x) + ' | ' + str(bullet.y) + ' | ' + str(bullet.speed) + ' | ' + str(
+                    bullet.angle) + ' <-- WYSTRZELONA KULA')
                 self.pickle_bullet(bullet)
-
-    def get_bullets(self):
-        return self.bullets
 
     def drop(self, obstacle):
         x = obstacle.x
@@ -450,18 +502,25 @@ class Gameplay:
         self.draw_map()
 
         for instance in itertools.chain(self.players, self.obstacles, self.pick_ups, self.bullets):
-            #if self.check_if_on_screen(instance):
-            if True:
-                self.draw_instance(instance)
+            self.draw_instance(instance)
 
+        #self.draw_area()
         self.draw_hud()
-        player = self.current_focus
 
-        # pygame.draw.rect(self.screen, (200, 100, 50), attack_zone)
+    def draw_area(self):
+        (x, y) = self.calculate_corrected_position(self.area)
+        pos = (int(x), int(y))
+        size = self.get_zoomed_dimensions(self.area)[0]
+        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA, 32)
+        surf.set_alpha(20)
+        zoom = self.current_focus.zoom
+        zoomed_width = int(self.area_width / zoom)
+        pygame.draw.circle(surf, (200, 0, 0, 128), pos, size // 2, int(zoomed_width))
+        self.screen.blit(surf, (0, 0))
 
     def draw_hud(self):
         text = ''
-        text += 'Life: {}\n'.format(self.current_focus.life)
+        text += 'Life: {}\n'.format(int(self.current_focus.life))
         text += 'Weapon: {}\n'.format(self.current_focus.weapon.type)
         if self.current_focus.weapon.type != 'hand':
             text += 'Magazine: {}\n'.format(self.current_focus.weapon.magazine)
@@ -497,22 +556,33 @@ class Gameplay:
         return rot_image, rot_rect
 
     def draw_instance(self, instance):
+        #print(instance)
+        zoomed_dims = self.get_zoomed_dimensions(instance)
+        #print('1')
+        image = pygame.transform.scale(instance.image, zoomed_dims)
+        #print('2')
+        image = pygame.transform.rotate(image, instance.angle)
+        #print('3')
+        pos = self.calculate_corrected_position(instance)
+        #print('4')
+        self.screen.blit(image, pos)
+        #print('5')
 
+    def get_zoomed_dimensions(self, instance):
         zoom = self.current_focus.zoom
-        image = instance.get_image()
-        (width, height) = image.get_rect().size
+        (width, height) = instance.get_image().get_rect().size
         zoomed_width = int(width / zoom)
         zoomed_height = int(height / zoom)
+        return zoomed_width, zoomed_height
 
-        image = pygame.transform.scale(image, (zoomed_width, zoomed_height))
+    def calculate_corrected_position(self, instance):
         (x, y) = self.calculate_position(instance)
+        zoom = self.current_focus.zoom
         player_rect = self.current_focus.image.get_rect()
         p_w = player_rect.w
         p_h = player_rect.h
         pos = (x / zoom - p_w / 2, y / zoom - p_h / 2)
-        image = pygame.transform.rotate(image, instance.angle)
-
-        self.screen.blit(image, pos)
+        return pos
 
     def get_view_rectangle(self):
         x = self.current_focus.get_x()

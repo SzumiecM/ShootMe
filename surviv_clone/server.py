@@ -20,13 +20,15 @@ s.listen(2)
 print("Waiting for a connection, Server Started")
 
 g = Gameplay()
-# base = [[g.allPlayersToPickle[0], g.bulletsToPickle], [g.allPlayersToPickle[1], g.bulletsToPickle]]
-
+playerindexes = []
 base = []
 for i in range(g.max_players):
+    playerindexes.append(i)
     base.append([g.allPlayersToPickle[i], [], []])
 
 print(base)
+
+
 def threaded_client(conn, player):
     conn.send(pickle.dumps([base, player, g.boxes]))
     reply = ""
@@ -61,12 +63,12 @@ def threaded_client(conn, player):
 
     print("Lost connection")
     conn.close()
+    base[player][0]['weapon'] = 'hand'
+    playerindexes.insert(0, player)
 
 
-currentPlayer = 0
 while True:
     conn, addr = s.accept()
     print("Connected to:", addr)
 
-    start_new_thread(threaded_client, (conn, currentPlayer))
-    currentPlayer += 1
+    start_new_thread(threaded_client, (conn, playerindexes.pop(0)))
