@@ -31,7 +31,6 @@ print(base)
 
 def threaded_client(conn, player):
     conn.send(pickle.dumps([base, player, g.boxes]))
-    reply = ""
     while True:
         try:
             playerData = pickle.loads(conn.recv(8192))  # pobieramy tylko playera
