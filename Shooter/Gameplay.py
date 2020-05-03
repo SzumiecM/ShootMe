@@ -303,17 +303,11 @@ class Gameplay:
             'size': self.obstacles[index].size
         }, index])
 
-    def pickle_box_removal(self, index):
-        self.boxes.append(['remove', index])
-
     def unPickle_boxes(self, data, index):
         for box in data[index][2]:
-            if box[0] == 'remove':
-                self.obstacles.remove(self.obstacles[box[1]])
-            else:
-                self.obstacles[box[1]].x = box[0]['x']
-                self.obstacles[box[1]].y = box[0]['y']
-                self.obstacles[box[1]].size = box[0]['size']
+            self.obstacles[box[1]].x = box[0]['x']
+            self.obstacles[box[1]].y = box[0]['y']
+            self.obstacles[box[1]].size = box[0]['size']
 
     def pickle_bullet(self, bullet):
         self.bulletsToPickle.append({
@@ -426,7 +420,6 @@ class Gameplay:
             type = obstacle.weapon.type
             obstacle.set_weapon(Weapon(self, 'hand', None))
         else:
-            self.pickle_box_removal(self.obstacles.index(obstacle))
             self.obstacles.remove(obstacle)
 
         self.generate_pick_ups(x, y, type)
@@ -489,19 +482,7 @@ class Gameplay:
         for instance in itertools.chain(self.players, self.obstacles, self.pick_ups, self.bullets):
             self.draw_instance(instance)
 
-        # self.draw_area()
         self.draw_hud()
-
-    def draw_area(self):
-        (x, y) = self.calculate_corrected_position(self.area)
-        pos = (int(x), int(y))
-        size = self.get_zoomed_dimensions(self.area)[0]
-        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA, 32)
-        surf.set_alpha(20)
-        zoom = self.current_focus.zoom
-        zoomed_width = int(self.area_width / zoom)
-        pygame.draw.circle(surf, (200, 0, 0, 128), pos, size // 2, int(zoomed_width))
-        self.screen.blit(surf, (0, 0))
 
     def draw_hud(self):
         text = ''
