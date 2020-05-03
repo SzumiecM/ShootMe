@@ -1,9 +1,0 @@
-{
-    "width": 1024,
-    "height": 576,
-    "max_players": 2,
-    "map_size": 10000,
-    "density": 0.02,
-    "min_obstacle_size": 22,
-    "max_obstacle_size": 50
-}
