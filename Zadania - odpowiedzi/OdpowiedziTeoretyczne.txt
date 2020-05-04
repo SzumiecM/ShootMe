@@ -1,0 +1,7 @@
+1. D
+2. B
+3. client.connect((192.168.2.1, 5525))
+4. B 
+5. Wynik otrzymujemy w radianach, dlatego w dalszym kroku musimy skonwertować go na stopnie. 
+Wynik funkcji atan2 jest także z zakresu od -180° do 180°, a my potrzebujemy do funkcji rotate zakres 
+od 0° do 360°, dlatego musimy dodać do funkcji wartość 180.
