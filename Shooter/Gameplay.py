@@ -269,7 +269,7 @@ class Gameplay:
         y = player.y + player.size / 2
         mid_x = self.area.x
         mid_y = self.area.y
-        return (x - mid_x) ** 2 + (y - mid_y) ** 2 > (self.area.size / 2 - self.area_width) ** 2
+        return False #(x - mid_x) ** 2 + (y - mid_y) ** 2 > (self.area.size / 2 - self.area_width) ** 2
 
     def collide_bullet(self, obstacle, bullet):
         if obstacle != bullet.owner:
