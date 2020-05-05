@@ -14,7 +14,7 @@ except socket.error as e:
 s.listen()
 print("Server Started")
 
-players = [400, 600]
+players = [400, 600]  # dowolne liczby (kwestia podkreślenia faktu że to serwer wysyła dane początkowe)
 
 strPlayers = str(players[0]) + ',' + str(players[1])
 
